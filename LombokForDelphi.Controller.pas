@@ -3,7 +3,7 @@ unit LombokForDelphi.Controller;
 interface
 
 uses
-  System.Classes, System.Rtti, System.Generics.Collections;
+  System.Classes, System.Rtti, System.TypInfo, System.JSON, System.Generics.Collections;
 
 type
   TObjectHelper = class helper for TObject
@@ -11,8 +11,9 @@ type
     function GetPropValueByName(const APropName: string): TValue;
     procedure SetPropValueByName(const APropName: string; const AValue: TValue);
     function GetFieldByName(const FieldName : string) : TValue;
-    procedure SetFieldValueByName(const FieldName: string; const AValue: TValue);
+    function SetFieldValueByName(const FieldName: string; const AValue: TValue) : TObject;
     function AllToString() : String;
+    function AllToJson() : String;
   end;
 
 
@@ -22,6 +23,56 @@ uses
   System.SysUtils, LombokForDelphi.Controller.AtributoAcesso;
 
 { TObjectHelper }
+
+function TObjectHelper.AllToJson: String;
+var
+  Contexto: TRttiContext;
+  Tipo: TRttiType;
+  Field: TRttiField;
+  JsonObjeto : TJSONObject;
+begin
+  JsonObjeto := TJSONObject.Create;
+  Contexto := TRttiContext.Create;
+  try
+    Tipo := Contexto.GetType(Self.ClassType);
+    for Field in Tipo.GetFields do
+      begin
+        if Field.Name.Equals('FRefCount') then
+          Continue;
+
+        case Field.FieldType.TypeKind of
+          tkUnknown: ;
+          tkInteger: JsonObjeto.AddPair(Field.Name, Field.GetValue(Self).AsInteger);
+          tkChar: ;
+          tkEnumeration: ;
+          tkFloat: JsonObjeto.AddPair(Field.Name, StrToFloat(Field.GetValue(Self).AsCurrency.ToString));
+          tkString: JsonObjeto.AddPair(Field.Name, Field.GetValue(Self).AsString);
+          tkSet: ;
+          tkClass: ;
+          tkMethod: ;
+          tkWChar: ;
+          tkLString: ;
+          tkWString: ;
+          tkVariant: ;
+          tkArray: ;
+          tkRecord: ;
+          tkInterface: ;
+          tkInt64: ;
+          tkDynArray: ;
+          tkUString: JsonObjeto.AddPair(Field.Name, Field.GetValue(Self).AsString);
+          tkClassRef: ;
+          tkPointer: ;
+          tkProcedure: ;
+          tkMRecord: ;
+        end;
+      end;
+      
+    Result := JsonObjeto.ToJSON;
+  finally
+    JsonObjeto.Free;
+    Contexto.Free;
+  end;
+end;
 
 function TObjectHelper.AllToString: String;
 var
@@ -69,7 +120,9 @@ begin
       end;
 
     for StringLocal in ListaDeStrings do
-      Result := Result + StringLocal + ' ';
+      Result := Result + StringLocal + ',' + sLineBreak;
+
+    Result := Copy(Result, 1, Length(Result) - 1);
       
   finally
     Contexto.Free;
@@ -117,13 +170,15 @@ begin
   end;
 end;
 
-procedure TObjectHelper.SetFieldValueByName(const FieldName: string;
-  const AValue: TValue);
+function TObjectHelper.SetFieldValueByName(const FieldName: string;
+  const AValue: TValue): TObject;
 var
   Contexto: TRttiContext;
   Tipo: TRttiType;
   Field: TRttiField;
 begin
+  Result := Self;
+
   Contexto := TRttiContext.Create;
   try
     Tipo := Contexto.GetType(Self.ClassType);
@@ -136,7 +191,7 @@ begin
            ((AValue.Kind = tkUString) or (AValue.Kind = tkString)) then
         begin
           if AValue.AsString.IsEmpty then
-            raise Exception.Create('Campo não pode ser null');
+            raise Exception.Create('Campo nï¿½o pode ser null');
         end;
 
         try
@@ -147,7 +202,7 @@ begin
             tkFloat : Field.SetValue(Self, StrToFloat(AValue.AsString));
           end;
         except
-          raise Exception.Create('Tipo não convencionado.');
+          raise Exception.Create('Tipo nï¿½o convencionado.');
         end;
 
       end
