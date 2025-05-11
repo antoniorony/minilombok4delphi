@@ -1,4 +1,4 @@
-unit LombokForDelphi.Controller;
+﻿unit LombokForDelphi.Controller;
 
 interface
 
@@ -196,13 +196,13 @@ begin
 
         try
           case Field.FieldType.TypeKind of
-            tkInteger : Field.SetValue(Self, StrToInt(AValue.AsString));
+            tkInteger : Field.SetValue(Self, StrToInt(AValue.ToString));
             tkString,
             tkUString : Field.SetValue(Self, AValue.AsString);
             tkFloat : Field.SetValue(Self, StrToFloat(AValue.AsString));
           end;
         except
-          raise Exception.Create('Tipo n�o convencionado.');
+          raise Exception.Create('Tipo não convencionado.');
         end;
 
       end
